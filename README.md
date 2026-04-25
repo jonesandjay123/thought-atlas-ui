@@ -1,6 +1,6 @@
 # Thought Atlas UI
 
-Thought Atlas UI 是 Thought Atlas 的 hosted public-readable showcase。這個 repo 只負責前端介面、互動骨架、Firebase Hosting 設定，以及把 Firestore 上的 Thought Atlas 資料以 read-only / owner-ready explorer 呈現出來。
+Thought Atlas UI 是 Thought Atlas 的 hosted public-readable showcase：一個可以分享給外部訪客看的 AI-assisted thought portfolio。它把長對話、reports、project notes 轉成 themes、trails、connected thoughts 與 source evidence。這個 repo 只負責前端介面、互動骨架、Firebase Hosting 設定，以及把 Firestore 上的 Thought Atlas 資料以 read-only / owner-ready showcase 呈現出來。
 
 核心 engine、資料抽取、graph schema、import/export pipeline 不在這裡；它們屬於 `jonesandjay123/thought-atlas`。
 

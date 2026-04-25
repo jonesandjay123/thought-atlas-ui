@@ -87,7 +87,7 @@ export function GraphPanel({
         </svg>
       </section>
       <EdgeRationalePanel edge={selectedEdge} atlas={atlas} />
-      <small className="quiet-version-mark">v1.3-thought-trails · suggested-paths</small>
+      <small className="quiet-version-mark">v1.4-public-polish · featured-trails</small>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import type { ThoughtAtlasViewModel } from "../viewModels/thoughtAtlasViewModel";
 import { formatDate } from "../utils/format";
-import { getSuggestedThoughtTrails, getTopThemes, type SuggestedTrail } from "../selectors/atlasSelectors";
+import { getFeaturedThoughtTrails, getSuggestedThoughtTrails, getTopThemes, type SuggestedTrail } from "../selectors/atlasSelectors";
 
 export function OverviewPanel({
   atlas,
@@ -25,39 +25,39 @@ export function OverviewPanel({
   const topThemes = getTopThemes(atlas, 14);
   const featuredThemes = topThemes.slice(0, 6);
   const recentNodes = [...atlas.nodes].sort((a, b) => String(b.updated_at ?? "").localeCompare(String(a.updated_at ?? ""))).slice(0, 6);
+  const featuredTrails = getFeaturedThoughtTrails(atlas);
   const suggestedTrails = getSuggestedThoughtTrails(atlas, 5);
 
   return (
     <div className="stack">
       <section className="overview-card hero-card">
-        <p className="eyebrow">Data status</p>
-        <h2>{atlas.meta.project_id || "thought-atlas"}</h2>
+        <p className="eyebrow">Start here</p>
+        <h2>Ideas, trails, and evidence</h2>
         <p className="summary">
-          Last exported at {formatDate(atlas.meta.exported_at)}. Local graph updated at {formatDate(atlas.meta.local_graph_updated_at)}.
+          Thought Atlas turns long-form conversations, reports, and project notes into a public portfolio of themes, connected ideas, narrative trails, and source-backed evidence.
         </p>
-        <div className={expectedCounts ? "success-banner" : "warning-banner"}>
-          {expectedCounts ? "Expected seed counts detected: 3 sources / 38 nodes / 37 edges / 3 reports." : "Counts loaded, but they do not match the expected seed snapshot."}
-        </div>
         <button className="primary-action" onClick={onOpenNodes}>Explore the atlas</button>
+        <p className="technical-status">
+          {atlas.meta.project_id || "thought-atlas"} · {expectedCounts ? "live corpus loaded" : "corpus loaded"} · exported {formatDate(atlas.meta.exported_at)}
+        </p>
       </section>
       <section className="showcase-intro-grid">
         <article className="overview-card what-is-card">
-          <p className="eyebrow">What is this?</p>
-          <h2>An AI-assisted thinking portfolio</h2>
-          <p className="summary">
-            Thought Atlas turns conversations, notes, checklists, and reflections into a browsable public map: sources become digests, digests become nodes, and nodes connect through explicit relationships.
-          </p>
-          <div className="principle-list">
-            <span>Not a notes app</span>
-            <span>Not a private admin console</span>
-            <span>A public showcase of evolving thought</span>
+          <p className="eyebrow">How to read this atlas</p>
+          <h2>A map of thinking, not a database dump</h2>
+          <div className="read-guide-grid">
+            <div><strong>Sources</strong><span>Long conversations, reports, and project notes.</span></div>
+            <div><strong>Nodes</strong><span>Durable ideas extracted from those sources.</span></div>
+            <div><strong>Edges</strong><span>How ideas support, extend, contrast, or connect.</span></div>
+            <div><strong>Themes</strong><span>Public entry points into recurring topics.</span></div>
+            <div><strong>Trails</strong><span>Narrative paths through connected thoughts.</span></div>
           </div>
         </article>
         <article className="overview-card trails-card">
-          <p className="eyebrow">Thought Trails</p>
-          <h2>Narrative paths are coming next</h2>
+          <p className="eyebrow">Public reading path</p>
+          <h2>Start with a theme, follow a trail, inspect the evidence</h2>
           <p className="summary">
-            Suggested trails now turn graph relations into short narrative paths visitors can follow through the atlas.
+            If you are new here, try a featured trail first. Each step can open the local graph and source-backed inspector.
           </p>
           <button className="secondary-action" onClick={onOpenGraph}>Preview graph</button>
         </article>
@@ -71,6 +71,13 @@ export function OverviewPanel({
             </div>
           </button>
         ))}
+      </section>
+      <section className="overview-card suggested-trails-card featured-trails-card">
+        <div className="section-title-row"><h3>Featured Thought Trails</h3><small>{featuredTrails.length} curated</small></div>
+        <div className="trail-card-grid">
+          {featuredTrails.map((trail) => <SuggestedTrailCard key={trail.id} trail={trail} onSelectNode={onSelectTrailNode} />)}
+          {featuredTrails.length === 0 ? <p className="empty-state">Featured trails are being curated.</p> : null}
+        </div>
       </section>
       <section className="overview-card suggested-trails-card">
         <div className="section-title-row"><h3>Suggested Thought Trails</h3><small>{suggestedTrails.length} auto-generated</small></div>
@@ -119,7 +126,8 @@ export function OverviewPanel({
 function SuggestedTrailCard({ trail, onSelectNode }: { trail: SuggestedTrail; onSelectNode: (nodeId: string) => void }) {
   return (
     <article className="trail-card">
-      <div className="section-title-row"><h4>{trail.title}</h4><small>{trail.sourceCount} sources · {trail.evidenceCount} evidence</small></div>
+      <div className="section-title-row"><h4>{trail.title}</h4><small>{trail.curated ? "featured" : `${trail.sourceCount} sources · ${trail.evidenceCount} evidence`}</small></div>
+      {trail.description ? <p className="summary">{trail.description}</p> : null}
       <ol>
         {trail.nodes.map((node, index) => (
           <li key={node.id}>

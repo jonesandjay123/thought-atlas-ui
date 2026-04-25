@@ -1780,3 +1780,56 @@ dd {
     grid-template-columns: 1fr;
   }
 }
+
+.technical-status {
+  margin: 14px 0 0;
+  color: var(--subtle);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.read-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 16px;
+}
+
+.read-guide-grid div {
+  display: grid;
+  gap: 4px;
+  padding: 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-softer);
+}
+
+.read-guide-grid strong {
+  color: var(--accent);
+  font-size: 0.84rem;
+}
+
+.read-guide-grid span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.42;
+}
+
+.featured-trails-card {
+  border-color: color-mix(in srgb, var(--accent), transparent 52%);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent), transparent 91%), transparent 48%),
+    var(--panel-solid);
+}
+
+.trail-card .summary {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .read-guide-grid {
+    grid-template-columns: 1fr;
+  }
+}

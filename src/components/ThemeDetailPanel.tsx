@@ -94,7 +94,7 @@ export function ThemeDetailPanel({
           {relatedEdges.length === 0 ? <p className="empty-state">No edges touch this theme yet.</p> : null}
         </div>
       </section>
-      <small className="quiet-version-mark">v1.3-thought-trails · suggested-paths</small>
+      <small className="quiet-version-mark">v1.4-public-polish · featured-trails</small>
     </div>
   );
 }

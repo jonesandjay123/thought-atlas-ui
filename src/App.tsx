@@ -162,7 +162,7 @@ function App() {
           <p className="eyebrow">Public AI-assisted thought portfolio</p>
           <h1>Thought Atlas</h1>
           <p className="topbar-subtitle">
-            A public map of ideas, questions, and projects emerging from long-running conversations with AI.
+            A public map of ideas I’m developing through long conversations with AI — organized into themes, trails, connected thoughts, and source evidence.
           </p>
           <StatusPill loadState={loadState} error={error} mode={atlas.mode} />
           <PublicModelNote />
@@ -304,7 +304,7 @@ function Metric({ value, label }: { value: string | number; label: string }) {
 function PublicModelNote() {
   return (
     <p className="public-model-note">
-      Public-readable showcase · ideas, sources, reports, and relationships are open to browse · owner-only writing is reserved for future tools.
+Public portfolio · open to browse · generated from conversations, reports, and project notes · read-only for visitors.
     </p>
   );
 }
