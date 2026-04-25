@@ -10,22 +10,23 @@ Thought Atlas UI 是 Thought Atlas 的 hosted web app shell。這個 repo 只負
 
 - UI only：Vite + React + TypeScript 的私有前端 repo
 - UI first：Vite + React + TypeScript 的 private hosted frontend
-- Current mock data：目前畫面仍讀 `src/data/mockThoughtAtlas.ts`
-- Next phase：接 Firebase web SDK，讀 Firestore 上的 `thought-atlas` seed data
+- Live data：若 `.env.local` / Hosting env 有 Firebase web config，畫面會讀 Firestore 上的 `thought-atlas` seed data
+- Mock fallback：缺 Firebase config 時才回到 `src/data/mockThoughtAtlas.ts`
 - Read-only boundary：第一版只讀 Firestore，不寫入、不 sync、不 ingest
 - Core separated：不要把 engine、CLI、ingest pipeline 或 durable graph storage 搬進這個 repo
 
 ## 目前畫面
 
-現有 atlas UI 來自早期 prototype，已保留主要互動：
+目前 V0 read-only viewer 已接上 Firestore live data，主要互動包含：
 
-- mock idea inbox
-- static graph preview
-- node inspector
-- mock cluster report
-- cluster filter tabs
+- Overview data status
+- Source list / source filter
+- Node explorer with search/kind/tag/source filters
+- Node inspector with related incoming/outgoing edges
+- Report viewer
+- Simple graph preview
 
-這些資料只用來展示未來 UI shape。`thought-atlas` core repo 現在已經把 seed dataset sync 到 Firestore；下一階段應把 `mockThoughtAtlas.ts` 替換成 Firestore read-only data access layer。
+`mockThoughtAtlas.ts` 現在只作為缺 Firebase config 時的 local fallback。
 
 ## 開發
 
@@ -37,7 +38,7 @@ npm run build
 
 `npm run build` 會先跑 TypeScript build，再用 Vite 產生 `dist/`。
 
-## 下一階段：Firestore read-only viewer
+## V0：Firestore read-only viewer
 
 後端目前已完成 v0 full sync 到 Firebase project `thought-atlas`：
 
@@ -50,7 +51,7 @@ thoughtReports: 3
 thoughtRegistryRuns: 11
 ```
 
-前端第一階段目標：
+前端第一階段目標已完成：
 
 1. 讀 `thoughtAtlasMeta/current` 顯示資料狀態。
 2. 讀 `thoughtSources` 顯示 source list。
@@ -80,6 +81,12 @@ hosting: enabled
 
 目前這個 repo 已有 Firebase SDK read-only client 與 live data adapter；若 `.env.local` 有 Firebase web config，UI 會用 `getDoc/getDocs` 讀 Firestore，否則回到 mock fallback。
 
-本機驗證狀態：`npm run build` 已通過；Firebase Web App `thought-atlas-ui` 已建立並可取得 SDK config。匿名 Firestore Web SDK live read 目前被 rules 擋下（`permission-denied`），所以正式看到 live counts 前，需要先決定 read rules / Auth 策略。不要為了方便把 private Thought Atlas 內容公開，除非 Jones 明確同意。
+V0 live 驗證狀態：
 
-部署仍不要急著做。先完成 local read-only viewer，確認資料顯示正確後，再決定 Hosting / Auth / Rules。
+- `npm run build` 通過。
+- Firebase Web App `thought-atlas-ui` 已建立並可取得 SDK config。
+- Firestore rules 目前由 Jones 決定使用 public read / no client write：`allow read: if true; allow write: if false;`。
+- Hosting 已部署：`https://thought-atlas.web.app`。
+- Browser snapshot 已確認 hosted site 顯示 Live Firestore，且 counts 為 3 sources / 38 nodes / 37 edges / 3 reports。
+
+下一步可再討論 Auth owner-only read 或 V1 graph explorer/library strategy；目前 V0 不做 Auth、不做 CRUD、不做 Functions、不做 Graphify/library 決策。
