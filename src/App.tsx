@@ -151,10 +151,10 @@ function App() {
     <main className="app-shell">
       <section className="topbar" aria-label="Thought Atlas overview">
         <div>
-          <p className="eyebrow">Firestore read-only explorer</p>
+          <p className="eyebrow">Public AI-assisted thought portfolio</p>
           <h1>Thought Atlas</h1>
           <p className="topbar-subtitle">
-            Browse sources, nodes, relations, and ingest reports mirrored from the local Thought Atlas backend. UI is read-only: no writes, no ingest, no sync.
+            A public map of ideas, questions, and projects emerging from long-running conversations with AI.
           </p>
           <StatusPill loadState={loadState} error={error} mode={atlas.mode} />
           <PublicModelNote />
@@ -283,7 +283,7 @@ function Metric({ value, label }: { value: string | number; label: string }) {
 function PublicModelNote() {
   return (
     <p className="public-model-note">
-      Public-readable showcase · Firestore client remains read-only · owner-only writes are reserved for future authenticated tools.
+      Public-readable showcase · ideas, sources, reports, and relationships are open to browse · owner-only writing is reserved for future tools.
     </p>
   );
 }
@@ -357,6 +357,11 @@ function OverviewPanel({
   const latestSources = [...atlas.sources].sort((a, b) => String(b.updated_at ?? b.last_seen_at ?? "").localeCompare(String(a.updated_at ?? a.last_seen_at ?? ""))).slice(0, 3);
   const tagCounts = atlas.nodes.flatMap((node) => node.tags).reduce<Map<string, number>>((counts, tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1), new Map());
   const topTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 14);
+  const featuredThemes = topTags.slice(0, 6).map(([tag, count]) => ({
+    tag,
+    count,
+    nodes: atlas.nodes.filter((node) => node.tags.includes(tag)).slice(0, 3),
+  }));
   const recentNodes = [...atlas.nodes].sort((a, b) => String(b.updated_at ?? "").localeCompare(String(a.updated_at ?? ""))).slice(0, 6);
 
   return (
@@ -370,7 +375,39 @@ function OverviewPanel({
         <div className={expectedCounts ? "success-banner" : "warning-banner"}>
           {expectedCounts ? "Expected seed counts detected: 3 sources / 38 nodes / 37 edges / 3 reports." : "Counts loaded, but they do not match the expected seed snapshot."}
         </div>
-        <button className="primary-action" onClick={onOpenNodes}>Explore nodes</button>
+        <button className="primary-action" onClick={onOpenNodes}>Explore the atlas</button>
+      </section>
+      <section className="showcase-intro-grid">
+        <article className="overview-card what-is-card">
+          <p className="eyebrow">What is this?</p>
+          <h2>An AI-assisted thinking portfolio</h2>
+          <p className="summary">
+            Thought Atlas turns conversations, notes, checklists, and reflections into a browsable public map: sources become digests, digests become nodes, and nodes connect through explicit relationships.
+          </p>
+          <div className="principle-list">
+            <span>Not a notes app</span>
+            <span>Not a private admin console</span>
+            <span>A public showcase of evolving thought</span>
+          </div>
+        </article>
+        <article className="overview-card trails-card">
+          <p className="eyebrow">Thought Trails</p>
+          <h2>Narrative paths are coming next</h2>
+          <p className="summary">
+            V1 will make it easier to follow trails like AI as Forge → Jarvis as Operator → Thought Atlas, or Ikigai → Playable Life System → Public Showcase.
+          </p>
+          <button className="secondary-action" onClick={onOpenGraph}>Preview graph</button>
+        </article>
+      </section>
+      <section className="featured-theme-grid">
+        {featuredThemes.map((theme) => (
+          <article className="overview-card featured-theme-card" key={theme.tag}>
+            <div className="section-title-row"><h3>{theme.tag}</h3><small>{theme.count} nodes</small></div>
+            <div className="compact-list">
+              {theme.nodes.map((node) => <div className="edge-chip" key={node.id}><strong>{node.title}</strong><span>{node.kind} · {Math.round(node.confidence * 100)}%</span></div>)}
+            </div>
+          </article>
+        ))}
       </section>
       <section className="dashboard-grid">
         <article className="overview-card dashboard-card">
@@ -515,6 +552,11 @@ function NodesPanel({
   const latestSources = [...atlas.sources].sort((a, b) => String(b.updated_at ?? b.last_seen_at ?? "").localeCompare(String(a.updated_at ?? a.last_seen_at ?? ""))).slice(0, 3);
   const tagCounts = atlas.nodes.flatMap((node) => node.tags).reduce<Map<string, number>>((counts, tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1), new Map());
   const topTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 14);
+  const featuredThemes = topTags.slice(0, 6).map(([tag, count]) => ({
+    tag,
+    count,
+    nodes: atlas.nodes.filter((node) => node.tags.includes(tag)).slice(0, 3),
+  }));
   const recentNodes = [...atlas.nodes].sort((a, b) => String(b.updated_at ?? "").localeCompare(String(a.updated_at ?? ""))).slice(0, 6);
 
   return (

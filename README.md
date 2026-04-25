@@ -28,6 +28,7 @@ Thought Atlas UI 是 Thought Atlas 的 hosted public-readable showcase。這個 
 - Simple graph preview
 - Optional Google login status，owner email 顯示 Owner mode，但不阻止 public read
 - Dashboard polish：latest sources、top tags/themes、recently active nodes、quick links
+- V1 first slice：public-facing hero copy、What is this、Featured Themes、Thought Trails placeholder
 
 `mockThoughtAtlas.ts` 現在只作為缺 Firebase config 時的 local fallback。
 
@@ -69,6 +70,7 @@ thoughtRegistryRuns: 11
 - `docs/firestore-ui-plan-zh.md`：下一階段 Firestore read-only viewer 開發計畫
 - `docs/ui-architecture-zh.md`：UI repo 分層、資料邊界、未來 client 接法
 - `docs/graph-explorer-strategy.md`：V1 graph explorer / library strategy（V0.2 不導入 graph library）
+- `docs/v1-showcase-strategy.md`：V1 public showcase / AI-assisted thought portfolio 產品方向
 - `docs/firebase-hosting-zh.md`：未來 Firebase Hosting 設定與部署前檢查
 - `docs/architecture-zh.md`：早期 prototype 的整體架構背景
 - `docs/data-model-zh.md`：早期資料模型草案
