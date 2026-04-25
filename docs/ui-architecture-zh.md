@@ -61,11 +61,26 @@ Firestore 或 exported graph payload
 
 ## Firebase SDK 原則
 
-目前不要加入 Firebase SDK。加入前至少要先決定：
+2026-04-25 更新：backend v0 已把完整 seed dataset sync 到 Firebase project `thought-atlas`，所以下一階段可以加入 Firebase web SDK，但範圍必須保持 read-only。
 
-- Auth 是否需要
-- Firestore document path 與 security rules
-- UI 是否讀 live graph，還是讀 core repo export 後的 published graph
-- local dev 使用 emulator、mock file、還是 staging project
+第一階段允許：
 
-在這些問題未定前，這個 repo 只保留 Hosting placeholder。
+- 初始化 Firebase web app
+- 讀 `thoughtAtlasMeta/current`
+- 讀 `thoughtSources`
+- 讀 `thoughtNodes`
+- 讀 `thoughtEdges`
+- 讀 `thoughtReports`
+- 將 Firestore docs normalize 成 UI view model
+
+第一階段不允許：
+
+- Firestore writes
+- UI 觸發 backend sync
+- UI 執行 ingest / graph patch / report generation
+- 放入 Admin SDK credential 或 service account
+
+更多交接與實作計畫見：
+
+- `docs/backend-handoff-zh.md`
+- `docs/firestore-ui-plan-zh.md`
