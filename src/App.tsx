@@ -15,12 +15,13 @@ import {
   type ThoughtAtlasViewModel,
 } from "./viewModels/thoughtAtlasViewModel";
 
-type TabId = "overview" | "sources" | "nodes" | "reports" | "graph";
+type TabId = "overview" | "themes" | "sources" | "nodes" | "reports" | "graph";
 type LoadState = "loading" | "ready" | "mock" | "error";
 type ThemeMode = "dark" | "light";
 
 const tabs: { id: TabId; label: string }[] = [
   { id: "overview", label: "Overview" },
+  { id: "themes", label: "Themes" },
   { id: "sources", label: "Sources" },
   { id: "nodes", label: "Nodes" },
   { id: "reports", label: "Reports" },
@@ -35,6 +36,7 @@ function App() {
   const [selectedSourceId, setSelectedSourceId] = useState<string>("all");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+  const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
   const [nodeQuery, setNodeQuery] = useState("");
   const [sourceQuery, setSourceQuery] = useState("");
   const [kindFilter, setKindFilter] = useState("all");
@@ -147,6 +149,12 @@ function App() {
     setActiveTab(targetTab);
   };
 
+  const selectTheme = (theme: string, targetTab: TabId = "themes") => {
+    setSelectedTheme(theme);
+    setTagFilter(theme);
+    setActiveTab(targetTab);
+  };
+
   return (
     <main className="app-shell">
       <section className="topbar" aria-label="Thought Atlas overview">
@@ -199,7 +207,20 @@ function App() {
 
         <section className="atlas-panel" aria-label="Thought Atlas content">
           {activeTab === "overview" && (
-            <OverviewPanel atlas={atlas} expectedCounts={expectedCounts} onOpenNodes={() => setActiveTab("nodes")} onOpenSources={() => setActiveTab("sources")} onOpenReports={() => setActiveTab("reports")} onOpenGraph={() => setActiveTab("graph")} />
+            <OverviewPanel atlas={atlas} expectedCounts={expectedCounts} onOpenNodes={() => setActiveTab("nodes")} onOpenSources={() => setActiveTab("sources")} onOpenReports={() => setActiveTab("reports")} onOpenGraph={() => setActiveTab("graph")} onOpenTheme={selectTheme} />
+          )}
+          {activeTab === "themes" && (
+            <ThemeDetailPanel
+              atlas={atlas}
+              selectedTheme={selectedTheme ?? atlas.tags[0] ?? ""}
+              onSelectTheme={selectTheme}
+              onSelectNode={(nodeId) => selectNode(nodeId, "graph")}
+              onSelectSource={(sourceId) => selectSource(sourceId, "sources")}
+              onOpenReport={(sourceId) => {
+                setSelectedReportId(sourceId);
+                setActiveTab("reports");
+              }}
+            />
           )}
           {activeTab === "sources" && (
             <SourcesPanel
@@ -346,6 +367,7 @@ function OverviewPanel({
   onOpenSources,
   onOpenReports,
   onOpenGraph,
+  onOpenTheme,
 }: {
   atlas: ThoughtAtlasViewModel;
   expectedCounts: boolean;
@@ -353,6 +375,7 @@ function OverviewPanel({
   onOpenSources: () => void;
   onOpenReports: () => void;
   onOpenGraph: () => void;
+  onOpenTheme: (theme: string) => void;
 }) {
   const latestSources = [...atlas.sources].sort((a, b) => String(b.updated_at ?? b.last_seen_at ?? "").localeCompare(String(a.updated_at ?? a.last_seen_at ?? ""))).slice(0, 3);
   const tagCounts = atlas.nodes.flatMap((node) => node.tags).reduce<Map<string, number>>((counts, tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1), new Map());
@@ -401,12 +424,12 @@ function OverviewPanel({
       </section>
       <section className="featured-theme-grid">
         {featuredThemes.map((theme) => (
-          <article className="overview-card featured-theme-card" key={theme.tag}>
+          <button className="overview-card featured-theme-card theme-entry-card" key={theme.tag} onClick={() => onOpenTheme(theme.tag)}>
             <div className="section-title-row"><h3>{theme.tag}</h3><small>{theme.count} nodes</small></div>
             <div className="compact-list">
               {theme.nodes.map((node) => <div className="edge-chip" key={node.id}><strong>{node.title}</strong><span>{node.kind} · {Math.round(node.confidence * 100)}%</span></div>)}
             </div>
-          </article>
+          </button>
         ))}
       </section>
       <section className="dashboard-grid">
@@ -419,7 +442,7 @@ function OverviewPanel({
         <article className="overview-card dashboard-card">
           <div className="section-title-row"><h3>Top tags / themes</h3><button onClick={onOpenNodes}>Filter nodes</button></div>
           <div className="theme-cloud">
-            {topTags.map(([tag, count]) => <span key={tag}>{tag}<em>{count}</em></span>)}
+            {topTags.map(([tag, count]) => <button key={tag} onClick={() => onOpenTheme(tag)}>{tag}<em>{count}</em></button>)}
           </div>
         </article>
         <article className="overview-card dashboard-card">
@@ -441,6 +464,115 @@ function OverviewPanel({
         <MiniCollection title="Node kinds" items={atlas.kinds} />
         <MiniCollection title="Top tags" items={atlas.tags.slice(0, 18)} />
       </section>
+    </div>
+  );
+}
+
+function ThemeDetailPanel({
+  atlas,
+  selectedTheme,
+  onSelectTheme,
+  onSelectNode,
+  onSelectSource,
+  onOpenReport,
+}: {
+  atlas: ThoughtAtlasViewModel;
+  selectedTheme: string;
+  onSelectTheme: (theme: string) => void;
+  onSelectNode: (nodeId: string) => void;
+  onSelectSource: (sourceId: string) => void;
+  onOpenReport: (sourceId: string) => void;
+}) {
+  const theme = selectedTheme || atlas.tags[0] || "untagged";
+  const relatedNodes = atlas.nodes.filter((node) => node.tags.includes(theme));
+  const relatedNodeIds = new Set(relatedNodes.map((node) => node.id));
+  const relatedSourceIds = new Set<string>();
+  relatedNodes.forEach((node) => node.source_ids.forEach((sourceId) => relatedSourceIds.add(sourceId)));
+  atlas.sources.filter((source) => source.tags.includes(theme)).forEach((source) => relatedSourceIds.add(source.source_id));
+  const relatedSources = atlas.sources.filter((source) => relatedSourceIds.has(source.source_id));
+  const relatedEdges = atlas.edges.filter((edge) => relatedNodeIds.has(edge.from) || relatedNodeIds.has(edge.to));
+  const relatedReports = atlas.reports.filter((report) => relatedSourceIds.has(report.source_id));
+  const nodesByKind = atlas.kinds
+    .map((kind) => ({ kind, nodes: relatedNodes.filter((node) => node.kind === kind) }))
+    .filter((group) => group.nodes.length > 0);
+  const themeCounts = atlas.tags.map((tag) => [tag, atlas.nodes.filter((node) => node.tags.includes(tag)).length] as const).sort((a, b) => b[1] - a[1]);
+
+  return (
+    <div className="theme-detail stack">
+      <section className="overview-card theme-hero-card">
+        <p className="eyebrow">Theme entry point</p>
+        <h2>{theme}</h2>
+        <p className="summary">Themes are public-facing doors into the atlas: start with a topic, then follow nodes, source evidence, reports, and local graph relationships.</p>
+        <dl className="property-grid theme-metrics">
+          <div><dt>Nodes</dt><dd>{relatedNodes.length}</dd></div>
+          <div><dt>Sources</dt><dd>{relatedSources.length}</dd></div>
+          <div><dt>Edges</dt><dd>{relatedEdges.length}</dd></div>
+          <div><dt>Reports</dt><dd>{relatedReports.length}</dd></div>
+        </dl>
+      </section>
+
+      <section className="overview-card theme-picker-card">
+        <div className="section-title-row"><h3>Browse themes</h3><small>{atlas.tags.length} tags</small></div>
+        <div className="theme-cloud clickable">
+          {themeCounts.slice(0, 24).map(([tag, count]) => <button key={tag} className={tag === theme ? "active" : ""} onClick={() => onSelectTheme(tag)}>{tag}<em>{count}</em></button>)}
+        </div>
+      </section>
+
+      <section className="theme-grid-layout">
+        <article className="overview-card theme-wide-card">
+          <div className="section-title-row"><h3>Related nodes by kind</h3><small>{relatedNodes.length}</small></div>
+          <div className="kind-group-stack">
+            {nodesByKind.map((group) => (
+              <section key={group.kind} className="kind-group">
+                <h4>{group.kind}</h4>
+                <div className="compact-list">
+                  {group.nodes.map((node) => (
+                    <button key={node.id} onClick={() => onSelectNode(node.id)}>
+                      <strong>{node.title}</strong>
+                      <span>{Math.round(node.confidence * 100)}% · open in graph / inspector</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))}
+            {nodesByKind.length === 0 ? <p className="empty-state">No nodes have this tag yet.</p> : null}
+          </div>
+        </article>
+
+        <aside className="theme-side-stack">
+          <article className="overview-card">
+            <div className="section-title-row"><h3>Related sources</h3><small>{relatedSources.length}</small></div>
+            <div className="compact-list">
+              {relatedSources.map((source) => <button key={source.source_id} onClick={() => onSelectSource(source.source_id)}><strong>{source.title}</strong><span>{source.source_id}</span></button>)}
+              {relatedSources.length === 0 ? <p className="empty-state">No related sources.</p> : null}
+            </div>
+          </article>
+          <article className="overview-card">
+            <div className="section-title-row"><h3>Related reports</h3><small>{relatedReports.length}</small></div>
+            <div className="compact-list">
+              {relatedReports.map((report) => <button key={report.source_id} onClick={() => onOpenReport(report.source_id)}><strong>{atlas.sourceById.get(report.source_id)?.title ?? report.source_id}</strong><span>{report.digest_items} digest items · {report.patch_operations} ops</span></button>)}
+              {relatedReports.length === 0 ? <p className="empty-state">No related reports.</p> : null}
+            </div>
+          </article>
+        </aside>
+      </section>
+
+      <section className="overview-card">
+        <div className="section-title-row"><h3>Related edges</h3><small>{relatedEdges.length}</small></div>
+        <div className="theme-edge-list">
+          {relatedEdges.map((edge) => (
+            <button key={edge.id} onClick={() => onSelectNode(edge.from)}>
+              <span>{edge.relation}</span>
+              <strong>{atlas.nodeById.get(edge.from)?.title ?? edge.from}</strong>
+              <em>→</em>
+              <strong>{atlas.nodeById.get(edge.to)?.title ?? edge.to}</strong>
+              <small>{edge.rationale}</small>
+            </button>
+          ))}
+          {relatedEdges.length === 0 ? <p className="empty-state">No edges touch this theme yet.</p> : null}
+        </div>
+      </section>
+      <small className="quiet-version-mark">v1.2-theme-views · public-entry-points</small>
     </div>
   );
 }
