@@ -72,6 +72,7 @@ thoughtRegistryRuns: 11
 - `docs/graph-explorer-strategy.md`：V1 graph explorer / library strategy（V0.2 不導入 graph library）
 - `docs/v1-showcase-strategy.md`：V1 public showcase / AI-assisted thought portfolio 產品方向
 - `docs/v1-theme-views.md`：V1.2 Theme / Tag Detail Views，讓 tags 變成 public entry points
+- `docs/v1-thought-trails.md`：V1.3 Thought Trails，說明 Theme / Graph / Trail 三層展示模型
 - `docs/firebase-hosting-zh.md`：未來 Firebase Hosting 設定與部署前檢查
 - `docs/architecture-zh.md`：早期 prototype 的整體架構背景
 - `docs/data-model-zh.md`：早期資料模型草案

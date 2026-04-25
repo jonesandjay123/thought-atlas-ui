@@ -1,4 +1,4 @@
-import type { ClusterReport, IdeaInboxItem, ThoughtEdge, ThoughtNode } from "../types";
+import type { ClusterReport, IdeaInboxItem, ThoughtEdge, ThoughtNode } from "../legacyMockTypes";
 
 export const clusters: ClusterReport[] = [
   {
