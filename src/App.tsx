@@ -175,14 +175,16 @@ function App() {
         </div>
         <div className="topbar-actions">
           <AuthStatus auth={auth} ui={ui} />
-          <button className="theme-toggle" onClick={() => setLocale((current) => current === "zh" ? "en" : "zh")} aria-label="Toggle language">
-            <span>{locale === "zh" ? "中文" : "EN"}</span>
-            <strong>文</strong>
-          </button>
-          <button className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} aria-label="Toggle dark mode">
-            <span>{theme === "dark" ? ui.themeMode.dark : ui.themeMode.light}</span>
-            <strong>{theme === "dark" ? "☾" : "☀"}</strong>
-          </button>
+          <div className="toggle-row" aria-label="Display options">
+            <button className="theme-toggle" onClick={() => setLocale((current) => current === "zh" ? "en" : "zh")} aria-label="Toggle language">
+              <span>{locale === "zh" ? "中文" : "EN"}</span>
+              <strong>文</strong>
+            </button>
+            <button className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} aria-label="Toggle dark mode">
+              <span>{theme === "dark" ? ui.themeMode.dark : ui.themeMode.light}</span>
+              <strong>{theme === "dark" ? "☾" : "☀"}</strong>
+            </button>
+          </div>
           <div className="metrics" aria-label="Atlas metrics">
           <Metric value={atlas.meta.source_count || atlas.sources.length} label={ui.metrics.sources} />
           <Metric value={atlas.meta.node_count || atlas.nodes.length} label={ui.metrics.nodes} />

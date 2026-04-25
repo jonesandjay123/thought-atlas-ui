@@ -145,6 +145,13 @@ h3 {
   width: min(520px, 100%);
 }
 
+.toggle-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .theme-toggle {
   display: inline-flex;
   align-items: center;
@@ -1144,6 +1151,10 @@ dd {
   .topbar-actions {
     justify-items: stretch;
     width: 100%;
+  }
+
+  .toggle-row {
+    justify-content: flex-start;
   }
 
   .auth-card {
