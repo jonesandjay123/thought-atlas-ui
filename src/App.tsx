@@ -16,6 +16,7 @@ import {
 
 type TabId = "overview" | "sources" | "nodes" | "reports" | "graph";
 type LoadState = "loading" | "ready" | "mock" | "error";
+type ThemeMode = "dark" | "light";
 
 const tabs: { id: TabId; label: string }[] = [
   { id: "overview", label: "Overview" },
@@ -37,6 +38,15 @@ function App() {
   const [sourceQuery, setSourceQuery] = useState("");
   const [kindFilter, setKindFilter] = useState("all");
   const [tagFilter, setTagFilter] = useState("all");
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    if (typeof window === "undefined") return "dark";
+    return window.localStorage.getItem("thought-atlas-theme") === "light" ? "light" : "dark";
+  });
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem("thought-atlas-theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     if (!hasFirebaseConfig()) return;
@@ -144,11 +154,17 @@ function App() {
           </p>
           <StatusPill loadState={loadState} error={error} mode={atlas.mode} />
         </div>
-        <div className="metrics" aria-label="Atlas metrics">
+        <div className="topbar-actions">
+          <button className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} aria-label="Toggle dark mode">
+            <span>{theme === "dark" ? "Dark" : "Light"}</span>
+            <strong>{theme === "dark" ? "☾" : "☀"}</strong>
+          </button>
+          <div className="metrics" aria-label="Atlas metrics">
           <Metric value={atlas.meta.source_count || atlas.sources.length} label="sources" />
           <Metric value={atlas.meta.node_count || atlas.nodes.length} label="nodes" />
           <Metric value={atlas.meta.edge_count || atlas.edges.length} label="edges" />
-          <Metric value={atlas.meta.report_count || atlas.reports.length} label="reports" />
+            <Metric value={atlas.meta.report_count || atlas.reports.length} label="reports" />
+          </div>
         </div>
       </section>
 
