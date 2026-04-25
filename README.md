@@ -78,6 +78,8 @@ firestore: Production, nam7
 hosting: enabled
 ```
 
-目前這個 repo 還沒有 Firebase SDK integration；下一個前端 session 可以開始接 Firestore read-only client。
+目前這個 repo 已有 Firebase SDK read-only client 與 live data adapter；若 `.env.local` 有 Firebase web config，UI 會用 `getDoc/getDocs` 讀 Firestore，否則回到 mock fallback。
+
+本機驗證狀態：`npm run build` 已通過；Firebase Web App `thought-atlas-ui` 已建立並可取得 SDK config。匿名 Firestore Web SDK live read 目前被 rules 擋下（`permission-denied`），所以正式看到 live counts 前，需要先決定 read rules / Auth 策略。不要為了方便把 private Thought Atlas 內容公開，除非 Jones 明確同意。
 
 部署仍不要急著做。先完成 local read-only viewer，確認資料顯示正確後，再決定 Hosting / Auth / Rules。
