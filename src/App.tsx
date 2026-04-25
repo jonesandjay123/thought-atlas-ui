@@ -831,7 +831,7 @@ function GraphPanel({
         </svg>
       </section>
       <EdgeRationalePanel edge={selectedEdge} atlas={atlas} />
-      <small className="quiet-version-mark">v1.1-polish · local-neighborhood</small>
+      <small className="quiet-version-mark">v1.2-theme-views · public-entry-points</small>
     </div>
   );
 }
