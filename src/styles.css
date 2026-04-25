@@ -1400,3 +1400,154 @@ dd {
     justify-content: start;
   }
 }
+
+.graph-polish-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-softer);
+}
+
+.graph-polish-bar p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.compact-action {
+  flex: 0 0 auto;
+  min-height: 30px;
+  margin-top: 0;
+  font-size: 0.74rem;
+}
+
+.compact-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.center-node-card {
+  gap: 11px;
+  padding: 26px;
+  text-align: left;
+}
+
+.center-node-card .eyebrow,
+.center-node-card span {
+  text-align: center;
+}
+
+.center-node-card strong {
+  display: block;
+  max-width: 100%;
+  text-align: center;
+  font-size: clamp(1.08rem, 2.1vw, 1.72rem);
+  line-height: 1.42;
+  letter-spacing: 0.015em;
+  overflow-wrap: anywhere;
+}
+
+.center-node-summary {
+  max-height: 7.2em;
+  overflow: hidden;
+  padding: 0 4px;
+  font-size: 0.9rem !important;
+  line-height: 1.72 !important;
+}
+
+.center-node-card.expanded .center-node-summary {
+  max-height: 16em;
+  overflow: auto;
+}
+
+.text-action {
+  justify-self: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-softer);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+.neighborhood-edge line {
+  opacity: 0.24;
+}
+
+.neighborhood-edge .edge-label-bg,
+.neighborhood-edge text {
+  opacity: 0;
+  transition: opacity 140ms ease, fill 140ms ease;
+}
+
+.neighborhood-edge .edge-label-bg {
+  fill: color-mix(in srgb, var(--panel-solid), transparent 8%);
+  stroke: color-mix(in srgb, var(--accent), transparent 45%);
+  stroke-width: 1.5;
+}
+
+.neighborhood-edge.active .edge-label-bg,
+.neighborhood-edge:hover .edge-label-bg,
+.neighborhood-edge.active text,
+.neighborhood-edge:hover text {
+  opacity: 1;
+}
+
+.neighborhood-edge text {
+  font-size: 18px;
+  stroke-width: 0;
+}
+
+.neighborhood-edge.active line,
+.neighborhood-edge:hover line {
+  stroke-width: 3.5;
+  opacity: 0.9;
+}
+
+.edge-rationale-panel {
+  display: grid;
+  gap: 7px;
+}
+
+.edge-rationale-panel .summary {
+  line-height: 1.55;
+}
+
+.quiet-version-mark {
+  justify-self: end;
+  color: var(--subtle);
+  font-size: 0.66rem;
+  opacity: 0.48;
+}
+
+@media (max-width: 760px) {
+  .graph-polish-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .compact-action {
+    width: fit-content;
+  }
+
+  .center-node-card {
+    padding: 20px;
+  }
+
+  .center-node-card strong {
+    font-size: 1.2rem;
+    line-height: 1.5;
+  }
+
+  .center-node-summary {
+    max-height: 8.5em;
+  }
+}
