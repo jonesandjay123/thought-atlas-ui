@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { loginWithGoogle, logout, subscribeToAuthState, type AuthSnapshot } from "./clients/authClient";
 import { loadThoughtAtlasFromFirestore } from "./clients/firestoreThoughtAtlasClient";
 import { hasFirebaseConfig } from "./clients/firebaseApp";
+import { I18nProvider, getUiText, useUiText, type Locale } from "./i18n";
 import { GraphPanel } from "./components/GraphPanel";
 import { Inspector } from "./components/Inspector";
 import { NodesPanel } from "./components/NodesPanel";
@@ -19,14 +20,7 @@ type TabId = "overview" | "themes" | "sources" | "nodes" | "reports" | "graph";
 type LoadState = "loading" | "ready" | "mock" | "error";
 type ThemeMode = "dark" | "light";
 
-const tabs: { id: TabId; label: string }[] = [
-  { id: "overview", label: "Overview" },
-  { id: "themes", label: "Themes" },
-  { id: "sources", label: "Sources" },
-  { id: "nodes", label: "Nodes" },
-  { id: "reports", label: "Reports" },
-  { id: "graph", label: "Graph" },
-];
+const tabIds: TabId[] = ["overview", "themes", "sources", "nodes", "reports", "graph"];
 
 function App() {
   const [atlas, setAtlas] = useState<ThoughtAtlasViewModel>(() => createMockThoughtAtlasViewModel());
@@ -46,6 +40,10 @@ function App() {
     if (typeof window === "undefined") return "dark";
     return window.localStorage.getItem("thought-atlas-theme") === "light" ? "light" : "dark";
   });
+  const [locale, setLocale] = useState<Locale>(() => {
+    if (typeof window === "undefined") return "zh";
+    return window.localStorage.getItem("thought-atlas-locale") === "en" ? "en" : "zh";
+  });
 
   useEffect(() => subscribeToAuthState(setAuth), []);
 
@@ -53,6 +51,11 @@ function App() {
     document.documentElement.dataset.theme = theme;
     window.localStorage.setItem("thought-atlas-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.lang = locale === "zh" ? "zh-Hant" : "en";
+    window.localStorage.setItem("thought-atlas-locale", locale);
+  }, [locale]);
 
   useEffect(() => {
     if (!hasFirebaseConfig()) return;
@@ -155,37 +158,44 @@ function App() {
     setActiveTab(targetTab);
   };
 
+  const ui = getUiText(locale);
+
   return (
+    <I18nProvider locale={locale}>
     <main className="app-shell">
       <section className="topbar" aria-label="Thought Atlas overview">
         <div>
-          <p className="eyebrow">Public AI-assisted thought portfolio</p>
+          <p className="eyebrow">{ui.topEyebrow}</p>
           <h1>Thought Atlas</h1>
           <p className="topbar-subtitle">
-            A public map of ideas I’m developing through long conversations with AI — organized into themes, trails, connected thoughts, and source evidence.
+            {ui.topSubtitle}
           </p>
           <StatusPill loadState={loadState} error={error} mode={atlas.mode} />
           <PublicModelNote />
         </div>
         <div className="topbar-actions">
-          <AuthStatus auth={auth} />
+          <AuthStatus auth={auth} ui={ui} />
+          <button className="theme-toggle" onClick={() => setLocale((current) => current === "zh" ? "en" : "zh")} aria-label="Toggle language">
+            <span>{locale === "zh" ? "中文" : "EN"}</span>
+            <strong>文</strong>
+          </button>
           <button className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} aria-label="Toggle dark mode">
-            <span>{theme === "dark" ? "Dark" : "Light"}</span>
+            <span>{theme === "dark" ? ui.themeMode.dark : ui.themeMode.light}</span>
             <strong>{theme === "dark" ? "☾" : "☀"}</strong>
           </button>
           <div className="metrics" aria-label="Atlas metrics">
-          <Metric value={atlas.meta.source_count || atlas.sources.length} label="sources" />
-          <Metric value={atlas.meta.node_count || atlas.nodes.length} label="nodes" />
-          <Metric value={atlas.meta.edge_count || atlas.edges.length} label="edges" />
-            <Metric value={atlas.meta.report_count || atlas.reports.length} label="reports" />
+          <Metric value={atlas.meta.source_count || atlas.sources.length} label={ui.metrics.sources} />
+          <Metric value={atlas.meta.node_count || atlas.nodes.length} label={ui.metrics.nodes} />
+          <Metric value={atlas.meta.edge_count || atlas.edges.length} label={ui.metrics.edges} />
+            <Metric value={atlas.meta.report_count || atlas.reports.length} label={ui.metrics.reports} />
           </div>
         </div>
       </section>
 
       <nav className="tabbar" aria-label="Thought Atlas sections">
-        {tabs.map((tab) => (
-          <button key={tab.id} className={activeTab === tab.id ? "active" : ""} onClick={() => setActiveTab(tab.id)}>
-            {tab.label}
+        {tabIds.map((tabId) => (
+          <button key={tabId} className={activeTab === tabId ? "active" : ""} onClick={() => setActiveTab(tabId)}>
+            {ui.tabs[tabId]}
           </button>
         ))}
       </nav>
@@ -193,8 +203,8 @@ function App() {
       <section className="workspace live-workspace">
         <aside className="inbox-panel source-panel" aria-label="Sources and filters">
           <div className="panel-heading">
-            <p className="eyebrow">Sources</p>
-            <h2>Seed corpus</h2>
+            <p className="eyebrow">{ui.sourcesPanel.eyebrow}</p>
+            <h2>{ui.sourcesPanel.title}</h2>
           </div>
           <SourcePicker
             sources={filteredSources}
@@ -273,20 +283,22 @@ function App() {
           {selectedNode ? (
             <Inspector node={selectedNode} relatedEdges={relatedEdges} atlas={atlas} onSelectSource={(sourceId) => selectSource(sourceId, "sources")} />
           ) : (
-            <section className="detail-card"><p>No node selected.</p></section>
+            <section className="detail-card"><p>{ui.common.noSelectedNode}</p></section>
           )}
         </aside>
       </section>
     </main>
+    </I18nProvider>
   );
 }
 
 function StatusPill({ loadState, error, mode }: { loadState: LoadState; error: string | null; mode: string }) {
-  const label = loadState === "ready" ? "Live Firestore" : loadState === "loading" ? "Loading Firestore…" : loadState === "mock" ? "Mock fallback" : "Firestore error";
+  const ui = useUiText();
+  const label = loadState === "ready" ? ui.status.ready : loadState === "loading" ? ui.status.loading : loadState === "mock" ? ui.status.mock : ui.status.error;
   return (
     <div className={`status-pill ${loadState}`}>
       <strong>{label}</strong>
-      <span>{mode === "firestore" ? "getDoc / getDocs · read-only" : "local preview data"}</span>
+      <span>{mode === "firestore" ? ui.status.live : ui.status.preview}</span>
       {error ? <small>{error}</small> : null}
     </div>
   );
@@ -302,24 +314,21 @@ function Metric({ value, label }: { value: string | number; label: string }) {
 }
 
 function PublicModelNote() {
-  return (
-    <p className="public-model-note">
-Public portfolio · open to browse · generated from conversations, reports, and project notes · read-only for visitors.
-    </p>
-  );
+  const ui = useUiText();
+  return <p className="public-model-note">{ui.publicNote}</p>;
 }
 
-function AuthStatus({ auth }: { auth: AuthSnapshot }) {
+function AuthStatus({ auth, ui }: { auth: AuthSnapshot; ui: ReturnType<typeof getUiText> }) {
   return (
     <section className={auth.isOwner ? "auth-card owner" : "auth-card"} aria-label="Optional Google login status">
       <div>
-        <strong>{auth.isOwner ? "Owner mode" : auth.email ? "Visitor signed in" : "Public visitor"}</strong>
-        <span>{auth.email ?? "No login needed to read"}</span>
+        <strong>{auth.isOwner ? ui.auth.owner : auth.email ? ui.auth.signedIn : ui.auth.publicVisitor}</strong>
+        <span>{auth.email ?? ui.auth.noLogin}</span>
       </div>
       {auth.email ? (
-        <button onClick={() => void logout()}>Logout</button>
+        <button onClick={() => void logout()}>{ui.auth.logout}</button>
       ) : (
-        <button onClick={() => void loginWithGoogle()}>Login with Google</button>
+        <button onClick={() => void loginWithGoogle()}>{ui.auth.login}</button>
       )}
     </section>
   );

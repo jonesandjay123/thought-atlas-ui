@@ -3,6 +3,7 @@ import type { ThoughtEdgeDoc, ThoughtNodeDoc } from "../firestoreTypes";
 import type { ThoughtAtlasViewModel } from "../viewModels/thoughtAtlasViewModel";
 import { truncate } from "../utils/format";
 import { getNodeNeighborhood } from "../selectors/atlasSelectors";
+import { useUiText } from "../i18n";
 
 export function GraphPanel({
   atlas,
@@ -15,6 +16,7 @@ export function GraphPanel({
   selectedNode?: ThoughtNodeDoc;
   onSelectNode: (nodeId: string) => void;
 }) {
+  const ui = useUiText();
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [focusHistory, setFocusHistory] = useState<string[]>([]);
   const [expanded, setExpanded] = useState(false);
@@ -29,7 +31,7 @@ export function GraphPanel({
   }, [selectedNode?.id]);
 
   if (!selectedNode) {
-    return <p className="empty-state">Select a node to see its local neighborhood.</p>;
+    return <p className="empty-state">{ui.graph.selectNode}</p>;
   }
 
   const selectNeighbor = (nodeId: string) => {
@@ -47,28 +49,28 @@ export function GraphPanel({
   return (
     <div className="neighborhood-layout">
       <div className="graph-polish-bar">
-        <p>Tip: click a left or right neighbor to follow the thought trail; use Back to return to the previous focus.</p>
-        <button className="secondary-action compact-action" disabled={!focusHistory.length} onClick={goBack}>← Back</button>
+        <p>{ui.graph.tip}</p>
+        <button className="secondary-action compact-action" disabled={!focusHistory.length} onClick={goBack}>{ui.graph.back}</button>
       </div>
       <section className="neighborhood-stage" aria-label="Local neighborhood graph">
         <div className="neighborhood-column incoming-column">
-          <p className="eyebrow">Incoming</p>
+          <p className="eyebrow">{ui.graph.incoming}</p>
           {incomingEdges.length ? incomingEdges.map((edge) => (
             <NeighborNodeCard key={edge.id} edge={edge} node={atlas.nodeById.get(edge.from)} direction="incoming" selected={selectedEdge?.id === edge.id} onSelectEdge={setSelectedEdgeId} onSelectNode={selectNeighbor} />
-          )) : <p className="empty-state">No incoming neighbors.</p>}
+          )) : <p className="empty-state">{ui.graph.noneIncoming}</p>}
         </div>
         <div className={expanded ? "center-node-card expanded" : "center-node-card"}>
-          <p className="eyebrow">Selected node</p>
+          <p className="eyebrow">{ui.graph.selected}</p>
           <strong>{selectedNode.title}</strong>
           <span>{selectedNode.kind} · {Math.round(selectedNode.confidence * 100)}%</span>
           <p className="center-node-summary">{displayBody}</p>
-          {bodyIsLong ? <button className="text-action" onClick={() => setExpanded((value) => !value)}>{expanded ? "Collapse" : "Expand"}</button> : null}
+          {bodyIsLong ? <button className="text-action" onClick={() => setExpanded((value) => !value)}>{expanded ? ui.graph.collapse : ui.graph.expand}</button> : null}
         </div>
         <div className="neighborhood-column outgoing-column">
-          <p className="eyebrow">Outgoing</p>
+          <p className="eyebrow">{ui.graph.outgoing}</p>
           {outgoingEdges.length ? outgoingEdges.map((edge) => (
             <NeighborNodeCard key={edge.id} edge={edge} node={atlas.nodeById.get(edge.to)} direction="outgoing" selected={selectedEdge?.id === edge.id} onSelectEdge={setSelectedEdgeId} onSelectNode={selectNeighbor} />
-          )) : <p className="empty-state">No outgoing neighbors.</p>}
+          )) : <p className="empty-state">{ui.graph.noneOutgoing}</p>}
         </div>
         <svg className="neighborhood-svg" viewBox="0 0 1000 520" aria-hidden="true">
           <defs>
@@ -87,7 +89,7 @@ export function GraphPanel({
         </svg>
       </section>
       <EdgeRationalePanel edge={selectedEdge} atlas={atlas} />
-      <small className="quiet-version-mark">v1.4-public-polish · featured-trails</small>
+      <small className="quiet-version-mark">v1.5-i18n · zh-default</small>
     </div>
   );
 }
@@ -155,10 +157,11 @@ function NeighborhoodEdgeLine({
 
 
 function EdgeRationalePanel({ edge, atlas }: { edge: ThoughtEdgeDoc | null; atlas: ThoughtAtlasViewModel }) {
-  if (!edge) return <aside className="edge-rationale-panel"><p className="empty-state">Hover or focus an edge / neighbor to inspect its relation rationale.</p></aside>;
+  const ui = useUiText();
+  if (!edge) return <aside className="edge-rationale-panel"><p className="empty-state">{ui.graph.hover}</p></aside>;
   return (
     <aside className="edge-rationale-panel">
-      <p className="eyebrow">Edge rationale</p>
+      <p className="eyebrow">{ui.graph.rationale}</p>
       <h3>{edge.relation}</h3>
       <p className="summary"><strong>{atlas.nodeById.get(edge.from)?.title ?? edge.from}</strong> → <strong>{atlas.nodeById.get(edge.to)?.title ?? edge.to}</strong></p>
       <p>{edge.rationale}</p>
