@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { loginWithGoogle, logout, subscribeToAuthState, type AuthSnapshot } from "./clients/authClient";
 import { loadThoughtAtlasFromFirestore } from "./clients/firestoreThoughtAtlasClient";
 import { hasFirebaseConfig } from "./clients/firebaseApp";
 import type {
@@ -38,10 +39,13 @@ function App() {
   const [sourceQuery, setSourceQuery] = useState("");
   const [kindFilter, setKindFilter] = useState("all");
   const [tagFilter, setTagFilter] = useState("all");
+  const [auth, setAuth] = useState<AuthSnapshot>({ user: null, email: null, isOwner: false, ready: false });
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window === "undefined") return "dark";
     return window.localStorage.getItem("thought-atlas-theme") === "light" ? "light" : "dark";
   });
+
+  useEffect(() => subscribeToAuthState(setAuth), []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -153,8 +157,10 @@ function App() {
             Browse sources, nodes, relations, and ingest reports mirrored from the local Thought Atlas backend. UI is read-only: no writes, no ingest, no sync.
           </p>
           <StatusPill loadState={loadState} error={error} mode={atlas.mode} />
+          <PublicModelNote />
         </div>
         <div className="topbar-actions">
+          <AuthStatus auth={auth} />
           <button className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} aria-label="Toggle dark mode">
             <span>{theme === "dark" ? "Dark" : "Light"}</span>
             <strong>{theme === "dark" ? "☾" : "☀"}</strong>
@@ -193,7 +199,7 @@ function App() {
 
         <section className="atlas-panel" aria-label="Thought Atlas content">
           {activeTab === "overview" && (
-            <OverviewPanel atlas={atlas} expectedCounts={expectedCounts} onOpenNodes={() => setActiveTab("nodes")} />
+            <OverviewPanel atlas={atlas} expectedCounts={expectedCounts} onOpenNodes={() => setActiveTab("nodes")} onOpenSources={() => setActiveTab("sources")} onOpenReports={() => setActiveTab("reports")} onOpenGraph={() => setActiveTab("graph")} />
           )}
           {activeTab === "sources" && (
             <SourcesPanel
@@ -274,6 +280,30 @@ function Metric({ value, label }: { value: string | number; label: string }) {
   );
 }
 
+function PublicModelNote() {
+  return (
+    <p className="public-model-note">
+      Public-readable showcase · Firestore client remains read-only · owner-only writes are reserved for future authenticated tools.
+    </p>
+  );
+}
+
+function AuthStatus({ auth }: { auth: AuthSnapshot }) {
+  return (
+    <section className={auth.isOwner ? "auth-card owner" : "auth-card"} aria-label="Optional Google login status">
+      <div>
+        <strong>{auth.isOwner ? "Owner mode" : auth.email ? "Visitor signed in" : "Public visitor"}</strong>
+        <span>{auth.email ?? "No login needed to read"}</span>
+      </div>
+      {auth.email ? (
+        <button onClick={() => void logout()}>Logout</button>
+      ) : (
+        <button onClick={() => void loginWithGoogle()}>Login with Google</button>
+      )}
+    </section>
+  );
+}
+
 function SourcePicker({
   sources,
   sourceQuery,
@@ -309,7 +339,26 @@ function SourcePicker({
   );
 }
 
-function OverviewPanel({ atlas, expectedCounts, onOpenNodes }: { atlas: ThoughtAtlasViewModel; expectedCounts: boolean; onOpenNodes: () => void }) {
+function OverviewPanel({
+  atlas,
+  expectedCounts,
+  onOpenNodes,
+  onOpenSources,
+  onOpenReports,
+  onOpenGraph,
+}: {
+  atlas: ThoughtAtlasViewModel;
+  expectedCounts: boolean;
+  onOpenNodes: () => void;
+  onOpenSources: () => void;
+  onOpenReports: () => void;
+  onOpenGraph: () => void;
+}) {
+  const latestSources = [...atlas.sources].sort((a, b) => String(b.updated_at ?? b.last_seen_at ?? "").localeCompare(String(a.updated_at ?? a.last_seen_at ?? ""))).slice(0, 3);
+  const tagCounts = atlas.nodes.flatMap((node) => node.tags).reduce<Map<string, number>>((counts, tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1), new Map());
+  const topTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 14);
+  const recentNodes = [...atlas.nodes].sort((a, b) => String(b.updated_at ?? "").localeCompare(String(a.updated_at ?? ""))).slice(0, 6);
+
   return (
     <div className="stack">
       <section className="overview-card hero-card">
@@ -322,6 +371,33 @@ function OverviewPanel({ atlas, expectedCounts, onOpenNodes }: { atlas: ThoughtA
           {expectedCounts ? "Expected seed counts detected: 3 sources / 38 nodes / 37 edges / 3 reports." : "Counts loaded, but they do not match the expected seed snapshot."}
         </div>
         <button className="primary-action" onClick={onOpenNodes}>Explore nodes</button>
+      </section>
+      <section className="dashboard-grid">
+        <article className="overview-card dashboard-card">
+          <div className="section-title-row"><h3>Latest sources</h3><button onClick={onOpenSources}>View all</button></div>
+          <div className="compact-list">
+            {latestSources.map((source) => <div className="edge-chip" key={source.source_id}><strong>{source.title}</strong><span>{formatDate(source.updated_at ?? source.last_seen_at)}</span></div>)}
+          </div>
+        </article>
+        <article className="overview-card dashboard-card">
+          <div className="section-title-row"><h3>Top tags / themes</h3><button onClick={onOpenNodes}>Filter nodes</button></div>
+          <div className="theme-cloud">
+            {topTags.map(([tag, count]) => <span key={tag}>{tag}<em>{count}</em></span>)}
+          </div>
+        </article>
+        <article className="overview-card dashboard-card">
+          <div className="section-title-row"><h3>Recently active nodes</h3><button onClick={onOpenNodes}>Explore</button></div>
+          <div className="compact-list">
+            {recentNodes.map((node) => <div className="edge-chip" key={node.id}><strong>{node.title}</strong><span>{node.kind} · {Math.round(node.confidence * 100)}%</span></div>)}
+          </div>
+        </article>
+        <article className="overview-card dashboard-card quick-links">
+          <h3>Quick links</h3>
+          <button onClick={onOpenSources}>Browse source details</button>
+          <button onClick={onOpenNodes}>Search nodes</button>
+          <button onClick={onOpenReports}>Read reports</button>
+          <button onClick={onOpenGraph}>Preview graph</button>
+        </article>
       </section>
       <section className="overview-grid">
         <MiniCollection title="Sources" items={atlas.sources.map((source) => source.title)} />
@@ -436,6 +512,11 @@ function NodesPanel({
   onSourceFilter: (value: string) => void;
   onSelectNode: (nodeId: string) => void;
 }) {
+  const latestSources = [...atlas.sources].sort((a, b) => String(b.updated_at ?? b.last_seen_at ?? "").localeCompare(String(a.updated_at ?? a.last_seen_at ?? ""))).slice(0, 3);
+  const tagCounts = atlas.nodes.flatMap((node) => node.tags).reduce<Map<string, number>>((counts, tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1), new Map());
+  const topTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 14);
+  const recentNodes = [...atlas.nodes].sort((a, b) => String(b.updated_at ?? "").localeCompare(String(a.updated_at ?? ""))).slice(0, 6);
+
   return (
     <div className="stack">
       <div className="filter-row four-controls">

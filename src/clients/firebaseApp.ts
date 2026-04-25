@@ -8,7 +8,7 @@ export function hasFirebaseConfig() {
   return Boolean(import.meta.env.VITE_FIREBASE_API_KEY && import.meta.env.VITE_FIREBASE_PROJECT_ID && import.meta.env.VITE_FIREBASE_APP_ID);
 }
 
-export function getThoughtAtlasFirestore(): Firestore {
+export function getThoughtAtlasApp(): FirebaseApp {
   if (!hasFirebaseConfig()) {
     throw new Error("Missing Firebase web config. Copy .env.example to .env.local and fill VITE_FIREBASE_* values.");
   }
@@ -24,6 +24,10 @@ export function getThoughtAtlasFirestore(): Firestore {
     });
   }
 
-  if (!db) db = getFirestore(app);
+  return app;
+}
+
+export function getThoughtAtlasFirestore(): Firestore {
+  if (!db) db = getFirestore(getThoughtAtlasApp());
   return db;
 }

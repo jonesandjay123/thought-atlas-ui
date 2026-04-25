@@ -1024,3 +1024,134 @@ dd {
     min-height: 380px;
   }
 }
+
+.public-model-note {
+  max-width: 720px;
+  margin: 10px 0 0;
+  color: var(--subtle);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.auth-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.auth-card.owner {
+  border-color: color-mix(in srgb, var(--success-text), transparent 45%);
+  background: var(--success-bg);
+}
+
+.auth-card div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.auth-card strong {
+  font-size: 0.82rem;
+}
+
+.auth-card span {
+  overflow: hidden;
+  color: var(--subtle);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-card button,
+.dashboard-card .section-title-row button,
+.quick-links button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dashboard-card {
+  min-height: 220px;
+}
+
+.theme-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.theme-cloud span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: var(--chip-bg);
+  color: var(--text);
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+.theme-cloud em {
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-style: normal;
+  font-size: 0.68rem;
+}
+
+.quick-links {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+}
+
+.quick-links button {
+  width: 100%;
+  border-radius: 8px;
+  text-align: left;
+}
+
+@media (max-width: 1180px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .topbar-actions {
+    justify-items: stretch;
+    width: 100%;
+  }
+
+  .auth-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
