@@ -36,6 +36,17 @@ export type ThoughtSourceDoc = {
   updated_at: string | null;
 };
 
+
+export type ThoughtDigestDoc = {
+  digest_id: string;
+  source_id: string;
+  created_at: string | null;
+  summary: string;
+  item_count: number;
+  items: Record<string, unknown>[];
+  path: string;
+};
+
 export type ThoughtNodeDoc = {
   id: string;
   kind: string;

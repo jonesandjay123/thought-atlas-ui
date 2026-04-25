@@ -1,6 +1,7 @@
 import { clusters, edges as mockEdges, nodes as mockNodes } from "../data/mockThoughtAtlas";
 import type {
   ThoughtAtlasMetaDoc,
+  ThoughtDigestDoc,
   ThoughtEdgeDoc,
   ThoughtNodeDoc,
   ThoughtReportDoc,
@@ -13,11 +14,13 @@ export type ThoughtAtlasViewModel = {
   mode: DataMode;
   meta: ThoughtAtlasMetaDoc;
   sources: ThoughtSourceDoc[];
+  digests: ThoughtDigestDoc[];
   nodes: ThoughtNodeDoc[];
   edges: ThoughtEdgeDoc[];
   reports: ThoughtReportDoc[];
   nodeById: Map<string, ThoughtNodeDoc>;
   sourceById: Map<string, ThoughtSourceDoc>;
+  digestBySourceId: Map<string, ThoughtDigestDoc>;
   reportBySourceId: Map<string, ThoughtReportDoc>;
   kinds: string[];
   tags: string[];
@@ -26,6 +29,7 @@ export type ThoughtAtlasViewModel = {
 export type ThoughtAtlasPayload = {
   meta: ThoughtAtlasMetaDoc;
   sources: ThoughtSourceDoc[];
+  digests: ThoughtDigestDoc[];
   nodes: ThoughtNodeDoc[];
   edges: ThoughtEdgeDoc[];
   reports: ThoughtReportDoc[];
@@ -33,22 +37,26 @@ export type ThoughtAtlasPayload = {
 
 export function createThoughtAtlasViewModel(payload: ThoughtAtlasPayload, mode: DataMode = "firestore"): ThoughtAtlasViewModel {
   const sources = [...payload.sources].sort((a, b) => a.title.localeCompare(b.title));
+  const digests = [...payload.digests].sort((a, b) => a.source_id.localeCompare(b.source_id));
   const nodes = [...payload.nodes].sort((a, b) => a.title.localeCompare(b.title));
   const edges = [...payload.edges].sort((a, b) => a.relation.localeCompare(b.relation));
   const reports = [...payload.reports].sort((a, b) => a.source_id.localeCompare(b.source_id));
   const nodeById = new Map(nodes.map((node) => [node.id, node]));
   const sourceById = new Map(sources.map((source) => [source.source_id, source]));
+  const digestBySourceId = new Map(digests.map((digest) => [digest.source_id, digest]));
   const reportBySourceId = new Map(reports.map((report) => [report.source_id, report]));
 
   return {
     mode,
     meta: payload.meta,
     sources,
+    digests,
     nodes,
     edges,
     reports,
     nodeById,
     sourceById,
+    digestBySourceId,
     reportBySourceId,
     kinds: unique(nodes.map((node) => node.kind)),
     tags: unique(nodes.flatMap((node) => node.tags)),
@@ -97,6 +105,16 @@ export function createMockThoughtAtlasViewModel(): ThoughtAtlasViewModel {
     updated_at: null,
   }));
 
+  const digests: ThoughtDigestDoc[] = clusters.map((cluster) => ({
+    digest_id: `${cluster.id}-digest`,
+    source_id: cluster.id,
+    created_at: null,
+    summary: cluster.thesis,
+    item_count: cluster.nodeIds.length,
+    items: cluster.nodeIds.map((nodeId) => ({ node_id: nodeId })),
+    path: "src/data/mockThoughtAtlas.ts",
+  }));
+
   const reports: ThoughtReportDoc[] = clusters.map((cluster) => ({
     source_id: cluster.id,
     path: "src/data/mockThoughtAtlas.ts",
@@ -124,6 +142,7 @@ export function createMockThoughtAtlasViewModel(): ThoughtAtlasViewModel {
       local_graph_updated_at: null,
     },
     sources,
+    digests,
     nodes,
     edges,
     reports,

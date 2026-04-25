@@ -2,6 +2,7 @@ import { collection, doc, getDoc, getDocs, type DocumentData } from "firebase/fi
 import { getThoughtAtlasFirestore } from "./firebaseApp";
 import type {
   ThoughtAtlasMetaDoc,
+  ThoughtDigestDoc,
   ThoughtEdgeDoc,
   ThoughtNodeDoc,
   ThoughtReportDoc,
@@ -11,9 +12,10 @@ import { createThoughtAtlasViewModel, type ThoughtAtlasViewModel } from "../view
 
 export async function loadThoughtAtlasFromFirestore(): Promise<ThoughtAtlasViewModel> {
   const db = getThoughtAtlasFirestore();
-  const [metaSnapshot, sourcesSnapshot, nodesSnapshot, edgesSnapshot, reportsSnapshot] = await Promise.all([
+  const [metaSnapshot, sourcesSnapshot, digestsSnapshot, nodesSnapshot, edgesSnapshot, reportsSnapshot] = await Promise.all([
     getDoc(doc(db, "thoughtAtlasMeta", "current")),
     getDocs(collection(db, "thoughtSources")),
+    getDocs(collection(db, "thoughtDigests")),
     getDocs(collection(db, "thoughtNodes")),
     getDocs(collection(db, "thoughtEdges")),
     getDocs(collection(db, "thoughtReports")),
@@ -24,6 +26,7 @@ export async function loadThoughtAtlasFromFirestore(): Promise<ThoughtAtlasViewM
   return createThoughtAtlasViewModel({
     meta: normalizeMeta(metaSnapshot.data()),
     sources: sourcesSnapshot.docs.map((snapshot) => normalizeSource({ source_id: snapshot.id, ...snapshot.data() })),
+    digests: digestsSnapshot.docs.map((snapshot) => normalizeDigest({ digest_id: snapshot.id, ...snapshot.data() })),
     nodes: nodesSnapshot.docs.map((snapshot) => normalizeNode({ id: snapshot.id, ...snapshot.data() })),
     edges: edgesSnapshot.docs.map((snapshot) => normalizeEdge({ id: snapshot.id, ...snapshot.data() })),
     reports: reportsSnapshot.docs.map((snapshot) => normalizeReport({ source_id: snapshot.id, ...snapshot.data() })),
@@ -60,6 +63,18 @@ function normalizeSource(data: DocumentData): ThoughtSourceDoc {
     last_seen_at: asNullableDateString(data.last_seen_at),
     created_at: asNullableDateString(data.created_at),
     updated_at: asNullableDateString(data.updated_at),
+  };
+}
+
+function normalizeDigest(data: DocumentData): ThoughtDigestDoc {
+  return {
+    digest_id: asString(data.digest_id),
+    source_id: asString(data.source_id),
+    created_at: asNullableDateString(data.created_at),
+    summary: asString(data.summary),
+    item_count: asNumber(data.item_count),
+    items: Array.isArray(data.items) ? data.items : [],
+    path: asString(data.path),
   };
 }
 

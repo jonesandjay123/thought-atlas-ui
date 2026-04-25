@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { loadThoughtAtlasFromFirestore } from "./clients/firestoreThoughtAtlasClient";
 import { hasFirebaseConfig } from "./clients/firebaseApp";
-import type { ThoughtEdgeDoc, ThoughtNodeDoc, ThoughtReportDoc, ThoughtSourceDoc } from "./firestoreTypes";
+import type {
+  FirestoreSourceRef,
+  ThoughtDigestDoc,
+  ThoughtEdgeDoc,
+  ThoughtNodeDoc,
+  ThoughtReportDoc,
+  ThoughtSourceDoc,
+} from "./firestoreTypes";
 import {
   createMockThoughtAtlasViewModel,
   type ThoughtAtlasViewModel,
@@ -26,7 +33,8 @@ function App() {
   const [selectedSourceId, setSelectedSourceId] = useState<string>("all");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
+  const [nodeQuery, setNodeQuery] = useState("");
+  const [sourceQuery, setSourceQuery] = useState("");
   const [kindFilter, setKindFilter] = useState("all");
   const [tagFilter, setTagFilter] = useState("all");
 
@@ -60,8 +68,19 @@ function App() {
     if (!selectedReportId && atlas.reports.length > 0) setSelectedReportId(atlas.reports[0].source_id);
   }, [atlas.nodes, atlas.reports, selectedNodeId, selectedReportId]);
 
+  const filteredSources = useMemo(() => {
+    const normalizedQuery = sourceQuery.trim().toLowerCase();
+    return atlas.sources.filter((source) => {
+      if (!normalizedQuery) return true;
+      return [source.title, source.source_id, source.source_type, ...source.tags]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedQuery);
+    });
+  }, [atlas.sources, sourceQuery]);
+
   const filteredNodes = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    const normalizedQuery = nodeQuery.trim().toLowerCase();
     return atlas.nodes.filter((node) => {
       const matchesQuery =
         !normalizedQuery ||
@@ -71,8 +90,9 @@ function App() {
       const matchesSource = selectedSourceId === "all" || node.source_ids.includes(selectedSourceId);
       return matchesQuery && matchesKind && matchesTag && matchesSource;
     });
-  }, [atlas.nodes, kindFilter, query, selectedSourceId, tagFilter]);
+  }, [atlas.nodes, kindFilter, nodeQuery, selectedSourceId, tagFilter]);
 
+  const selectedSource = selectedSourceId === "all" ? undefined : atlas.sourceById.get(selectedSourceId);
   const selectedNode = useMemo(
     () => atlas.nodeById.get(selectedNodeId ?? "") ?? filteredNodes[0] ?? atlas.nodes[0],
     [atlas.nodeById, atlas.nodes, filteredNodes, selectedNodeId],
@@ -86,14 +106,9 @@ function App() {
     [atlas.edges, selectedNode],
   );
 
-  const filteredEdges = useMemo(
-    () =>
-      atlas.edges.filter((edge) => {
-        const matchesSource = selectedSourceId === "all" || edge.source_ids.includes(selectedSourceId);
-        const matchesNode = !selectedNode || edge.from === selectedNode.id || edge.to === selectedNode.id;
-        return matchesSource && (activeTab === "graph" ? true : matchesNode);
-      }),
-    [activeTab, atlas.edges, selectedNode, selectedSourceId],
+  const sourceEdges = useMemo(
+    () => atlas.edges.filter((edge) => selectedSourceId === "all" || edge.source_ids.includes(selectedSourceId)),
+    [atlas.edges, selectedSourceId],
   );
 
   const selectedReport =
@@ -101,7 +116,22 @@ function App() {
     (selectedSourceId !== "all" ? atlas.reportBySourceId.get(selectedSourceId) : undefined) ??
     atlas.reports[0];
 
-  const expectedCounts = atlas.meta.source_count === 3 && atlas.meta.node_count === 38 && atlas.meta.edge_count === 37 && atlas.meta.report_count === 3;
+  const expectedCounts =
+    atlas.meta.source_count === 3 &&
+    atlas.meta.node_count === 38 &&
+    atlas.meta.edge_count === 37 &&
+    atlas.meta.report_count === 3;
+
+  const selectSource = (sourceId: string, targetTab: TabId = activeTab) => {
+    setSelectedSourceId(sourceId);
+    if (sourceId !== "all") setSelectedReportId(sourceId);
+    setActiveTab(targetTab);
+  };
+
+  const selectNode = (nodeId: string, targetTab: TabId = activeTab) => {
+    setSelectedNodeId(nodeId);
+    setActiveTab(targetTab);
+  };
 
   return (
     <main className="app-shell">
@@ -137,12 +167,11 @@ function App() {
             <h2>Seed corpus</h2>
           </div>
           <SourcePicker
-            sources={atlas.sources}
+            sources={filteredSources}
+            sourceQuery={sourceQuery}
             selectedSourceId={selectedSourceId}
-            onSelectSource={(sourceId) => {
-              setSelectedSourceId(sourceId);
-              if (sourceId !== "all") setSelectedReportId(sourceId);
-            }}
+            onSearch={setSourceQuery}
+            onSelectSource={(sourceId) => selectSource(sourceId, "sources")}
           />
         </aside>
 
@@ -150,19 +179,32 @@ function App() {
           {activeTab === "overview" && (
             <OverviewPanel atlas={atlas} expectedCounts={expectedCounts} onOpenNodes={() => setActiveTab("nodes")} />
           )}
-          {activeTab === "sources" && <SourcesPanel atlas={atlas} selectedSourceId={selectedSourceId} />}
+          {activeTab === "sources" && (
+            <SourcesPanel
+              atlas={atlas}
+              sources={selectedSource ? [selectedSource] : filteredSources}
+              selectedSourceId={selectedSourceId}
+              onSelectNode={(nodeId) => selectNode(nodeId, "nodes")}
+              onOpenReport={(sourceId) => {
+                setSelectedReportId(sourceId);
+                setActiveTab("reports");
+              }}
+            />
+          )}
           {activeTab === "nodes" && (
             <NodesPanel
               atlas={atlas}
               filteredNodes={filteredNodes}
               selectedNode={selectedNode}
-              query={query}
+              query={nodeQuery}
               kindFilter={kindFilter}
               tagFilter={tagFilter}
-              onQuery={setQuery}
+              selectedSourceId={selectedSourceId}
+              onQuery={setNodeQuery}
               onKindFilter={setKindFilter}
               onTagFilter={setTagFilter}
-              onSelectNode={setSelectedNodeId}
+              onSourceFilter={(sourceId) => setSelectedSourceId(sourceId)}
+              onSelectNode={(nodeId) => selectNode(nodeId)}
             />
           )}
           {activeTab === "reports" && (
@@ -171,21 +213,22 @@ function App() {
               selectedReport={selectedReport}
               selectedReportId={selectedReport?.source_id ?? null}
               onSelectReport={setSelectedReportId}
+              onSelectSource={(sourceId) => selectSource(sourceId, "sources")}
             />
           )}
           {activeTab === "graph" && (
             <GraphPanel
               nodes={filteredNodes.length ? filteredNodes : atlas.nodes}
-              edges={filteredEdges}
+              edges={sourceEdges}
               selectedNode={selectedNode}
-              onSelectNode={setSelectedNodeId}
+              onSelectNode={(nodeId) => selectNode(nodeId)}
             />
           )}
         </section>
 
         <aside className="inspector-panel" aria-label="Node inspector and relations">
           {selectedNode ? (
-            <Inspector node={selectedNode} relatedEdges={relatedEdges} atlas={atlas} />
+            <Inspector node={selectedNode} relatedEdges={relatedEdges} atlas={atlas} onSelectSource={(sourceId) => selectSource(sourceId, "sources")} />
           ) : (
             <section className="detail-card"><p>No node selected.</p></section>
           )}
@@ -217,15 +260,20 @@ function Metric({ value, label }: { value: string | number; label: string }) {
 
 function SourcePicker({
   sources,
+  sourceQuery,
   selectedSourceId,
+  onSearch,
   onSelectSource,
 }: {
   sources: ThoughtSourceDoc[];
+  sourceQuery: string;
   selectedSourceId: string;
+  onSearch: (value: string) => void;
   onSelectSource: (sourceId: string) => void;
 }) {
   return (
     <div className="source-list">
+      <input className="source-search" value={sourceQuery} onChange={(event) => onSearch(event.target.value)} placeholder="Search sources by title or id…" />
       <button className={selectedSourceId === "all" ? "source-card active" : "source-card"} onClick={() => onSelectSource("all")}>
         <strong>All sources</strong>
         <span>Show complete graph mirror</span>
@@ -240,6 +288,7 @@ function SourcePicker({
           <span>{source.source_id}</span>
         </button>
       ))}
+      {sources.length === 0 ? <p className="empty-state">No sources match this search.</p> : null}
     </div>
   );
 }
@@ -267,24 +316,80 @@ function OverviewPanel({ atlas, expectedCounts, onOpenNodes }: { atlas: ThoughtA
   );
 }
 
-function SourcesPanel({ atlas, selectedSourceId }: { atlas: ThoughtAtlasViewModel; selectedSourceId: string }) {
-  const selectedSources = selectedSourceId === "all" ? atlas.sources : atlas.sources.filter((source) => source.source_id === selectedSourceId);
+function SourcesPanel({
+  atlas,
+  sources,
+  selectedSourceId,
+  onSelectNode,
+  onOpenReport,
+}: {
+  atlas: ThoughtAtlasViewModel;
+  sources: ThoughtSourceDoc[];
+  selectedSourceId: string;
+  onSelectNode: (nodeId: string) => void;
+  onOpenReport: (sourceId: string) => void;
+}) {
   return (
-    <div className="card-grid">
-      {selectedSources.map((source) => (
-        <article className="collection-card" key={source.source_id}>
-          <div className="item-row"><strong>{source.title}</strong><span>{source.status}</span></div>
-          <p className="mono-id">{source.source_id}</p>
-          <p className="summary">{source.source_type} · updated {formatDate(source.updated_at ?? source.last_seen_at)}</p>
-          <div className="tag-row">{source.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
-          <dl className="property-grid compact">
-            <div><dt>Nodes</dt><dd>{atlas.nodes.filter((node) => node.source_ids.includes(source.source_id)).length}</dd></div>
-            <div><dt>Edges</dt><dd>{atlas.edges.filter((edge) => edge.source_ids.includes(source.source_id)).length}</dd></div>
-            <div><dt>Report</dt><dd>{atlas.reportBySourceId.has(source.source_id) ? "yes" : "no"}</dd></div>
-          </dl>
-        </article>
-      ))}
+    <div className="source-detail-stack">
+      {sources.map((source) => {
+        const sourceNodes = atlas.nodes.filter((node) => node.source_ids.includes(source.source_id));
+        const sourceEdges = atlas.edges.filter((edge) => edge.source_ids.includes(source.source_id));
+        const report = atlas.reportBySourceId.get(source.source_id);
+        const digest = atlas.digestBySourceId.get(source.source_id);
+        return (
+          <article className={selectedSourceId === source.source_id ? "collection-card selected" : "collection-card"} key={source.source_id}>
+            <div className="item-row"><strong>{source.title}</strong><span>{source.status}</span></div>
+            <p className="mono-id">{source.source_id}</p>
+            <p className="summary">{source.source_type} · updated {formatDate(source.updated_at ?? source.last_seen_at)}</p>
+            <div className="tag-row">{source.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
+            <dl className="property-grid compact">
+              <div><dt>Nodes</dt><dd>{sourceNodes.length}</dd></div>
+              <div><dt>Edges</dt><dd>{sourceEdges.length}</dd></div>
+              <div><dt>Report</dt><dd>{report ? "yes" : "no"}</dd></div>
+            </dl>
+            <DigestPreview digest={digest} />
+            <div className="source-sections">
+              <section>
+                <div className="section-title-row"><h3>Generated nodes</h3><small>{sourceNodes.length}</small></div>
+                <div className="compact-list">
+                  {sourceNodes.map((node) => (
+                    <button key={node.id} onClick={() => onSelectNode(node.id)}>
+                      <strong>{node.title}</strong>
+                      <span>{node.kind} · {Math.round(node.confidence * 100)}%</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+              <section>
+                <div className="section-title-row"><h3>Related edges</h3><small>{sourceEdges.length}</small></div>
+                <div className="compact-list">
+                  {sourceEdges.map((edge) => (
+                    <div className="edge-chip" key={edge.id}>
+                      <strong>{atlas.nodeById.get(edge.from)?.title ?? edge.from}</strong>
+                      <span>{edge.relation}</span>
+                      <strong>{atlas.nodeById.get(edge.to)?.title ?? edge.to}</strong>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+            {report ? <button className="secondary-action" onClick={() => onOpenReport(source.source_id)}>Open report</button> : null}
+          </article>
+        );
+      })}
+      {sources.length === 0 ? <p className="empty-state">No source selected or no source matches the current search.</p> : null}
     </div>
+  );
+}
+
+function DigestPreview({ digest }: { digest?: ThoughtDigestDoc }) {
+  if (!digest) return <p className="empty-state">No digest exported for this source.</p>;
+  return (
+    <section className="digest-preview">
+      <h3>Digest</h3>
+      <p className="summary">{digest.summary}</p>
+      <small>{digest.item_count} digest items · {formatDate(digest.created_at)}</small>
+    </section>
   );
 }
 
@@ -295,9 +400,11 @@ function NodesPanel({
   query,
   kindFilter,
   tagFilter,
+  selectedSourceId,
   onQuery,
   onKindFilter,
   onTagFilter,
+  onSourceFilter,
   onSelectNode,
 }: {
   atlas: ThoughtAtlasViewModel;
@@ -306,18 +413,22 @@ function NodesPanel({
   query: string;
   kindFilter: string;
   tagFilter: string;
+  selectedSourceId: string;
   onQuery: (value: string) => void;
   onKindFilter: (value: string) => void;
   onTagFilter: (value: string) => void;
+  onSourceFilter: (value: string) => void;
   onSelectNode: (nodeId: string) => void;
 }) {
   return (
     <div className="stack">
-      <div className="filter-row">
-        <input value={query} onChange={(event) => onQuery(event.target.value)} placeholder="Search title, body, kind, tags…" />
+      <div className="filter-row four-controls">
+        <input value={query} onChange={(event) => onQuery(event.target.value)} placeholder="Search nodes by title, body, tags…" />
         <select value={kindFilter} onChange={(event) => onKindFilter(event.target.value)}><option value="all">All kinds</option>{atlas.kinds.map((kind) => <option key={kind}>{kind}</option>)}</select>
         <select value={tagFilter} onChange={(event) => onTagFilter(event.target.value)}><option value="all">All tags</option>{atlas.tags.map((tag) => <option key={tag}>{tag}</option>)}</select>
+        <select value={selectedSourceId} onChange={(event) => onSourceFilter(event.target.value)}><option value="all">All sources</option>{atlas.sources.map((source) => <option key={source.source_id} value={source.source_id}>{source.title}</option>)}</select>
       </div>
+      <p className="result-count">{filteredNodes.length} matching nodes</p>
       <div className="node-list">
         {filteredNodes.map((node) => (
           <button key={node.id} className={selectedNode?.id === node.id ? "node-row active" : "node-row"} onClick={() => onSelectNode(node.id)}>
@@ -326,6 +437,7 @@ function NodesPanel({
             <span className="tag-row inline-tags">{node.tags.slice(0, 5).map((tag) => <em key={tag}>{tag}</em>)}</span>
           </button>
         ))}
+        {filteredNodes.length === 0 ? <p className="empty-state">No nodes match the current search and filters.</p> : null}
       </div>
     </div>
   );
@@ -336,11 +448,13 @@ function ReportsPanel({
   selectedReport,
   selectedReportId,
   onSelectReport,
+  onSelectSource,
 }: {
   atlas: ThoughtAtlasViewModel;
   selectedReport?: ThoughtReportDoc;
   selectedReportId: string | null;
   onSelectReport: (sourceId: string) => void;
+  onSelectSource: (sourceId: string) => void;
 }) {
   return (
     <div className="reports-layout">
@@ -355,6 +469,7 @@ function ReportsPanel({
       <article className="report-view">
         <p className="eyebrow">Ingest report</p>
         <h2>{selectedReport ? atlas.sourceById.get(selectedReport.source_id)?.title ?? selectedReport.source_id : "No report"}</h2>
+        {selectedReport ? <button className="secondary-action" onClick={() => onSelectSource(selectedReport.source_id)}>Open source detail</button> : null}
         <pre>{selectedReport?.markdown ?? "No report selected."}</pre>
       </article>
     </div>
@@ -404,7 +519,21 @@ function GraphPanel({
   );
 }
 
-function Inspector({ node, relatedEdges, atlas }: { node: ThoughtNodeDoc; relatedEdges: ThoughtEdgeDoc[]; atlas: ThoughtAtlasViewModel }) {
+function Inspector({
+  node,
+  relatedEdges,
+  atlas,
+  onSelectSource,
+}: {
+  node: ThoughtNodeDoc;
+  relatedEdges: ThoughtEdgeDoc[];
+  atlas: ThoughtAtlasViewModel;
+  onSelectSource: (sourceId: string) => void;
+}) {
+  const incomingEdges = relatedEdges.filter((edge) => edge.to === node.id);
+  const outgoingEdges = relatedEdges.filter((edge) => edge.from === node.id);
+  const sourceTitles = node.source_ids.map((sourceId) => atlas.sourceById.get(sourceId)).filter(Boolean) as ThoughtSourceDoc[];
+
   return (
     <section className="detail-card inspector-card">
       <div className="panel-heading"><p className="eyebrow">Node inspector</p><h2>{node.title}</h2></div>
@@ -415,16 +544,32 @@ function Inspector({ node, relatedEdges, atlas }: { node: ThoughtNodeDoc; relate
         <div><dt>Sources</dt><dd>{node.source_ids.length}</dd></div>
       </dl>
       <div className="tag-row">{node.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
-      <div className="relations"><h3>Relations</h3>{relatedEdges.map((edge) => <RelationRow key={edge.id} edge={edge} currentNodeId={node.id} atlas={atlas} />)}</div>
-      <div className="relations"><h3>Source refs</h3>{node.source_refs.length ? node.source_refs.map((ref, index) => <p className="source-ref" key={index}>{String(ref.source_id ?? ref.sourceId ?? "source")} · {String(ref.locator ?? ref.excerpt ?? ref.quote ?? "reference")}</p>) : <p className="summary">No source refs exported for this node.</p>}</div>
+      <div className="relations"><h3>Related sources</h3>{sourceTitles.map((source) => <button className="source-ref-button" key={source.source_id} onClick={() => onSelectSource(source.source_id)}>{source.title}<span>{source.source_id}</span></button>)}</div>
+      <div className="relations"><h3>Outgoing edges</h3>{outgoingEdges.length ? outgoingEdges.map((edge) => <RelationRow key={edge.id} edge={edge} currentNodeId={node.id} atlas={atlas} direction="outgoing" />) : <p className="empty-state">No outgoing edges.</p>}</div>
+      <div className="relations"><h3>Incoming edges</h3>{incomingEdges.length ? incomingEdges.map((edge) => <RelationRow key={edge.id} edge={edge} currentNodeId={node.id} atlas={atlas} direction="incoming" />) : <p className="empty-state">No incoming edges.</p>}</div>
+      <div className="relations"><h3>Source refs</h3>{node.source_refs.length ? node.source_refs.map((ref, index) => <SourceRefView refData={ref} atlas={atlas} key={index} />) : <p className="summary">No source refs exported for this node.</p>}</div>
     </section>
   );
 }
 
-function RelationRow({ edge, currentNodeId, atlas }: { edge: ThoughtEdgeDoc; currentNodeId: string; atlas: ThoughtAtlasViewModel }) {
-  const otherId = edge.from === currentNodeId ? edge.to : edge.from;
+function RelationRow({ edge, currentNodeId, atlas, direction }: { edge: ThoughtEdgeDoc; currentNodeId: string; atlas: ThoughtAtlasViewModel; direction: "incoming" | "outgoing" }) {
+  const otherId = direction === "outgoing" ? edge.to : edge.from;
   const other = atlas.nodeById.get(otherId);
   return <div className="relation-row"><span>{edge.relation}</span><strong>{other?.title ?? otherId}</strong><small>{edge.rationale}</small></div>;
+}
+
+function SourceRefView({ refData, atlas }: { refData: FirestoreSourceRef; atlas: ThoughtAtlasViewModel }) {
+  const sourceId = String(refData.source_id ?? refData.sourceId ?? "");
+  const sourceTitle = atlas.sourceById.get(sourceId)?.title ?? (sourceId || "Unknown source");
+  const locator = String(refData.locator ?? "");
+  const excerpt = String(refData.excerpt ?? refData.quote ?? "");
+  return (
+    <article className="source-ref">
+      <strong>{sourceTitle}</strong>
+      {locator ? <span>{locator}</span> : null}
+      {excerpt ? <p>{excerpt}</p> : null}
+    </article>
+  );
 }
 
 function MiniCollection({ title, items }: { title: string; items: string[] }) {
